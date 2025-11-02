@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Lightbox from "react-image-lightbox";
-import "react-image-lightbox/style.css";
+import "yet-another-react-lightbox/styles.css";
+import Lightbox from "yet-another-react-lightbox";
 import { FaTrash } from "react-icons/fa";
 import "../App.css";
 
@@ -123,23 +123,17 @@ export default function StageGallery({ category }) {
 
       {/* Lightbox for zoom + slideshow */}
       {isOpen && (
-        <Lightbox
-          mainSrc={photos[lightboxIndex].imageUrl}
-          nextSrc={photos[(lightboxIndex + 1) % photos.length].imageUrl}
-          prevSrc={
-            photos[(lightboxIndex + photos.length - 1) % photos.length].imageUrl
-          }
-          onCloseRequest={() => setIsOpen(false)}
-          onMovePrevRequest={() =>
-            setLightboxIndex(
-              (lightboxIndex + photos.length - 1) % photos.length
-            )
-          }
-          onMoveNextRequest={() =>
-            setLightboxIndex((lightboxIndex + 1) % photos.length)
-          }
-        />
-      )}
+  <Lightbox
+    open={isOpen}
+    close={() => setIsOpen(false)}
+    index={lightboxIndex}
+    slides={photos.map((p) => ({ src: p.imageUrl }))}
+    on={{
+      view: ({ index }) => setLightboxIndex(index),
+    }}
+  />
+)}
+
     </div>
   );
 }
