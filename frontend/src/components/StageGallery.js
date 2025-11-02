@@ -8,15 +8,18 @@ import "../App.css";
 export default function StageGallery({ category }) {
   const [photos, setPhotos] = useState([]);
   const [file, setFile] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false); // admin toggle
+  const [isAdmin, setIsAdmin] = useState(false);
   const [password, setPassword] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
+  // ✅ Backend Base URL (Render deployed backend)
+  const BASE_URL = "https://celebratehub.onrender.com";
+
   // Fetch photos from backend
   useEffect(() => {
     axios
-      .get(`http://localhost:8000/photos/${category}`)
+      .get(`${BASE_URL}/photos/${category}`)
       .then((res) => setPhotos(res.data))
       .catch((err) => console.error("Error fetching photos:", err));
   }, [category]);
@@ -29,7 +32,7 @@ export default function StageGallery({ category }) {
     formData.append("category", category);
 
     try {
-      const res = await axios.post("http://localhost:8000/upload", formData, {
+      const res = await axios.post(`${BASE_URL}/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setPhotos((prev) => [...prev, res.data]);
@@ -37,7 +40,7 @@ export default function StageGallery({ category }) {
       alert("✅ Photo uploaded successfully!");
     } catch (err) {
       console.error(err);
-      alert("❌ Upload failed.");
+      alert("❌ Upload failed. Check backend connection!");
     }
   };
 
@@ -45,7 +48,7 @@ export default function StageGallery({ category }) {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this photo?")) return;
     try {
-      await axios.delete(`http://localhost:8000/photos/${id}`);
+      await axios.delete(`${BASE_URL}/photos/${id}`);
       setPhotos((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
@@ -53,7 +56,7 @@ export default function StageGallery({ category }) {
     }
   };
 
-  // Simple admin login (no backend needed yet)
+  // Simple admin login
   const handleAdminLogin = () => {
     if (password === "anil123") {
       setIsAdmin(true);
@@ -123,17 +126,16 @@ export default function StageGallery({ category }) {
 
       {/* Lightbox for zoom + slideshow */}
       {isOpen && (
-  <Lightbox
-    open={isOpen}
-    close={() => setIsOpen(false)}
-    index={lightboxIndex}
-    slides={photos.map((p) => ({ src: p.imageUrl }))}
-    on={{
-      view: ({ index }) => setLightboxIndex(index),
-    }}
-  />
-)}
-
+        <Lightbox
+          open={isOpen}
+          close={() => setIsOpen(false)}
+          index={lightboxIndex}
+          slides={photos.map((p) => ({ src: p.imageUrl }))}
+          on={{
+            view: ({ index }) => setLightboxIndex(index),
+          }}
+        />
+      )}
     </div>
   );
 }
