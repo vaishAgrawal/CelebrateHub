@@ -53,12 +53,14 @@ const upload = multer({ storage });
 // ✅ Upload Route
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    // IMPORTANT: use Render URL instead of localhost
-    const BASE_URL = "https://celebratehub.onrender.com";
+    const BASE_URL = "https://celebratehub.onrender.com"; // backend ka URL
+    const filename = req.file.filename;
+
     const photo = new Photo({
-      imageUrl: `"https://celebratehub.onrender.com/uploads/12345-stage.jpg" ${req.file.filename}`,
+      imageUrl: `${BASE_URL}/uploads/${filename}`, // ✅ yehi line sahi hai
       category: req.body.category,
     });
+
     await photo.save();
     res.json(photo);
   } catch (err) {
@@ -66,6 +68,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Upload failed" });
   }
 });
+
 
 // ✅ Get photos by category
 app.get("/photos/:category", async (req, res) => {
