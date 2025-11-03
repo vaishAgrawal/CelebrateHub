@@ -1,162 +1,141 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Lightbox from "react-image-lightbox";
-import "react-image-lightbox/style.css";
+import "yet-another-react-lightbox/styles.css";
+import Lightbox from "yet-another-react-lightbox";
+import { FaTrash } from "react-icons/fa";
+import "../App.css";
 
-const StageGallery = () => {
-  const [category] = useState("stage");
-  const [media, setMedia] = useState([]);
-  const [files, setFiles] = useState([]);
+export default function StageGallery({ category }) {
+  const [photos, setPhotos] = useState([]);
+  const [file, setFile] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [password, setPassword] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const BASE_URL = "https://celebratehub.onrender.com"; // ✅ your deployed backend
+  // ✅ Backend Base URL (Render deployed backend)
+  const BASE_URL = "https://celebratehub.onrender.com";
 
+  // Fetch photos from backend
   useEffect(() => {
-    fetchMedia();
-  }, []);
+    axios
+      .get(`https://celebratehub.onrender.com/photos/${category}`)
+      .then((res) => setPhotos(res.data))
+      .catch((err) => console.error("Error fetching photos:", err));
+  }, [category]);
 
-  const fetchMedia = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/photos/${category}`);
-      setMedia(res.data);
-    } catch (err) {
-      console.error("❌ Error fetching media:", err);
-    }
-  };
-
+  // Handle upload
   const handleUpload = async () => {
-    if (!files.length) return alert("Select files first!");
+    if (!file) return alert("Select a photo first!");
     const formData = new FormData();
-    for (const file of files) formData.append("files", file);
+    formData.append("image", file);
     formData.append("category", category);
 
     try {
-      await axios.post(`${BASE_URL}/upload`, formData, {
+      const res = await axios.post(`https://celebratehub.onrender.com/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setFiles([]);
-      fetchMedia();
-      alert("✅ Uploaded successfully!");
+      setPhotos((prev) => [...prev, res.data]);
+      setFile(null);
+      alert("✅ Photo uploaded successfully!");
     } catch (err) {
-      console.error("❌ Upload failed:", err);
-      alert("Upload failed!");
+      console.error(err);
+      alert("❌ Upload failed. Check backend connection!");
     }
   };
 
+  // Handle delete
   const handleDelete = async (id) => {
+    if (!window.confirm("Delete this photo?")) return;
     try {
-      await axios.delete(`${BASE_URL}/photos/${id}`);
-      fetchMedia();
+      await axios.delete(`https://celebratehub.onrender.com/photos/${id}`);
+      setPhotos((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
-      console.error("❌ Delete failed:", err);
+      console.error(err);
+      alert("❌ Delete failed.");
     }
   };
 
-  const imageUrls = media.filter(m => m.type === "image").map(m => m.url);
+  // Simple admin login
+  const handleAdminLogin = () => {
+    if (password === "anil123") {
+      setIsAdmin(true);
+      alert("✅ Admin mode activated!");
+    } else {
+      alert("❌ Wrong password!");
+    }
+  };
 
   return (
-    <div style={{ padding: "20px", textAlign: "center" }}>
-      <h2 className="text-2xl font-bold mb-4">🎭 Stage Gallery</h2>
+    <div className="stage-page">
+      <h1>{category.toUpperCase()} Gallery</h1>
+      <p>Explore beautiful {category} decorations and setups ✨</p>
 
-      <input
-        type="file"
-        multiple
-        accept="image/*,video/*"
-        onChange={(e) => setFiles([...e.target.files])}
-      />
-      <button
-        onClick={handleUpload}
-        style={{
-          marginLeft: "10px",
-          padding: "8px 16px",
-          background: "teal",
-          color: "white",
-          borderRadius: "6px",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Upload
-      </button>
+      {/* 🧑‍💻 Admin Login Section */}
+      {!isAdmin && (
+        <div className="admin-login">
+          <input
+            type="password"
+            placeholder="Enter admin password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button onClick={handleAdminLogin}>Login as Admin</button>
+        </div>
+      )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-          gap: "15px",
-          marginTop: "30px",
-        }}
-      >
-        {media.map((item, i) => (
-          <div
-            key={item._id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "10px",
-              overflow: "hidden",
-              position: "relative",
-            }}
-          >
-            {item.type === "image" ? (
+      {/* Upload section (only for admin) */}
+      {isAdmin && (
+        <div className="upload-section">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files[0])}
+          />
+          <button onClick={handleUpload}>Upload Photo</button>
+        </div>
+      )}
+
+      {/* Gallery */}
+      <div className="gallery">
+        {photos.length === 0 ? (
+          <p>No photos yet. Upload your first one!</p>
+        ) : (
+          photos.map((photo, index) => (
+            <div className="photo-container" key={photo._id}>
               <img
-                src={item.url}
-                alt="media"
+                src={photo.imageUrl}
+                alt={category}
                 onClick={() => {
-                  setLightboxIndex(i);
-                  setIsLightboxOpen(true);
-                }}
-                style={{
-                  width: "100%",
-                  height: "200px",
-                  objectFit: "cover",
-                  cursor: "zoom-in",
+                  setLightboxIndex(index);
+                  setIsOpen(true);
                 }}
               />
-            ) : (
-              <video
-                src={item.url}
-                controls
-                style={{ width: "100%", height: "200px", objectFit: "cover" }}
-              />
-            )}
-            <button
-              onClick={() => handleDelete(item._id)}
-              style={{
-                position: "absolute",
-                top: "10px",
-                right: "10px",
-                background: "red",
-                color: "white",
-                border: "none",
-                borderRadius: "50%",
-                width: "30px",
-                height: "30px",
-                cursor: "pointer",
-              }}
-            >
-              ✖
-            </button>
-          </div>
-        ))}
+              {isAdmin && (
+                <button
+                  className="delete-btn"
+                  onClick={() => handleDelete(photo._id)}
+                >
+                  <FaTrash />
+                </button>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
-      {isLightboxOpen && (
+      {/* Lightbox for zoom + slideshow */}
+      {isOpen && (
         <Lightbox
-          mainSrc={imageUrls[lightboxIndex]}
-          nextSrc={imageUrls[(lightboxIndex + 1) % imageUrls.length]}
-          prevSrc={imageUrls[(lightboxIndex + imageUrls.length - 1) % imageUrls.length]}
-          onCloseRequest={() => setIsLightboxOpen(false)}
-          onMovePrevRequest={() =>
-            setLightboxIndex((lightboxIndex + imageUrls.length - 1) % imageUrls.length)
-          }
-          onMoveNextRequest={() =>
-            setLightboxIndex((lightboxIndex + 1) % imageUrls.length)
-          }
+          open={isOpen}
+          close={() => setIsOpen(false)}
+          index={lightboxIndex}
+          slides={photos.map((p) => ({ src: p.imageUrl }))}
+          on={{
+            view: ({ index }) => setLightboxIndex(index),
+          }}
         />
       )}
     </div>
   );
-};
-
-export default StageGallery;
+}
