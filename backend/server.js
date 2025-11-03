@@ -13,10 +13,16 @@ const app = express();
 // ✅ Setup CORS (for both local & deployed frontend)
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://celebrate-hub-21hs.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://celebrate-hub-21hs.vercel.app",
+      "https://celebrate-hub-21hs-7s6xmqxjh.vercel.app"  // ⚠️ ye tera actual live Vercel domain hai
+    ],
     methods: ["GET", "POST", "DELETE"],
+    allowedHeaders: ["Content-Type"],
   })
 );
+
 app.use(express.json());
 
 // ✅ File path setup
