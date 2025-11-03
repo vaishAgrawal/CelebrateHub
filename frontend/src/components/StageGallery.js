@@ -19,7 +19,7 @@ export default function StageGallery({ category }) {
   // Fetch photos from backend
   useEffect(() => {
     axios
-      .get(`${BASE_URL}/photos/${category}`)
+      .get(`https://celebratehub.onrender.com/photos/${category}`)
       .then((res) => setPhotos(res.data))
       .catch((err) => console.error("Error fetching photos:", err));
   }, [category]);
@@ -32,7 +32,7 @@ export default function StageGallery({ category }) {
     formData.append("category", category);
 
     try {
-      const res = await axios.post(`${BASE_URL}/upload`, formData, {
+      const res = await axios.post(`https://celebratehub.onrender.com/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setPhotos((prev) => [...prev, res.data]);
@@ -48,7 +48,7 @@ export default function StageGallery({ category }) {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this photo?")) return;
     try {
-      await axios.delete(`${BASE_URL}/photos/${id}`);
+      await axios.delete(`https://celebratehub.onrender.com/photos/${id}`);
       setPhotos((prev) => prev.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
