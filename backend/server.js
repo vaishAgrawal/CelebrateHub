@@ -10,24 +10,25 @@ import { fileURLToPath } from "url";
 dotenv.config();
 const app = express();
 
-// ✅ Setup CORS (for both local & deployed frontend)
+// ✅ Allow frontend domains (update with your Vercel link)
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
       "https://celebrate-hub-21hs.vercel.app",
-      "https://celebrate-hub-21hs-7s6xmqxjh.vercel.app"  // ⚠️ ye tera actual live Vercel domain hai
+      "https://celebrate-hub-21hs-7s6xmqxjh.vercel.app",
     ],
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
 );
-
 app.use(express.json());
 
 // ✅ File path setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// 🧠 Static folder for uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ MongoDB connect
@@ -53,14 +54,11 @@ const upload = multer({ storage });
 // ✅ Upload Route
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
-    const BASE_URL = "https://celebratehub.onrender.com"; // backend ka URL
-    const filename = req.file.filename;
-
+    const BASE_URL = "https://celebratehub.onrender.com";
     const photo = new Photo({
-      imageUrl: `${BASE_URL}/uploads/${filename}`, // ✅ yehi line sahi hai
+      imageUrl: `${BASE_URL}/uploads/${req.file.filename}`,
       category: req.body.category,
     });
-
     await photo.save();
     res.json(photo);
   } catch (err) {
@@ -68,7 +66,6 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Upload failed" });
   }
 });
-
 
 // ✅ Get photos by category
 app.get("/photos/:category", async (req, res) => {
@@ -80,7 +77,7 @@ app.get("/photos/:category", async (req, res) => {
   }
 });
 
-// ✅ Delete a photo by ID
+// ✅ Delete photo
 app.delete("/photos/:id", async (req, res) => {
   try {
     const photo = await Photo.findById(req.params.id);
@@ -97,11 +94,10 @@ app.delete("/photos/:id", async (req, res) => {
   }
 });
 
-// ✅ Default route for Render check
+// ✅ Default route
 app.get("/", (req, res) => {
   res.send("🎉 CelebrateHub Backend is Live!");
 });
 
-// ✅ Port setup
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
