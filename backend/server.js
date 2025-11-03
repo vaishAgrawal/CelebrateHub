@@ -1,4 +1,4 @@
-import fs from "fs"; 
+import fs from "fs";
 import express from "express";
 import mongoose from "mongoose";
 import multer from "multer";
@@ -10,55 +10,58 @@ import { fileURLToPath } from "url";
 dotenv.config();
 const app = express();
 
-// middlewares
+// ✅ Setup CORS (for both local & deployed frontend)
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://celebrate-hub-21hs.vercel.app"],
     methods: ["GET", "POST", "DELETE"],
   })
 );
 app.use(express.json());
 
-// File path setup
+// ✅ File path setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// MongoDB connect
+// ✅ MongoDB connect
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.log("❌ DB Error:", err));
 
-// Schema
+// ✅ Schema
 const PhotoSchema = new mongoose.Schema({
   imageUrl: String,
   category: String,
 });
 const Photo = mongoose.model("Photo", PhotoSchema);
 
-// Multer config (local storage)
+// ✅ Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, `${Date.now()}-${file.originalname}`),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 const upload = multer({ storage });
 
-// Routes
+// ✅ Upload Route
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
+    // IMPORTANT: use Render URL instead of localhost
+    const BASE_URL = "https://celebratehub.onrender.com";
     const photo = new Photo({
-      imageUrl: `http://localhost:8000/uploads/${req.file.filename}`,
+      imageUrl: `${BASE_URL}/uploads/${req.file.filename}`,
       category: req.body.category,
     });
     await photo.save();
     res.json(photo);
   } catch (err) {
+    console.error("Upload failed:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 });
 
+// ✅ Get photos by category
 app.get("/photos/:category", async (req, res) => {
   try {
     const photos = await Photo.find({ category: req.params.category });
@@ -68,17 +71,14 @@ app.get("/photos/:category", async (req, res) => {
   }
 });
 
-// Delete a photo by ID
+// ✅ Delete a photo by ID
 app.delete("/photos/:id", async (req, res) => {
   try {
     const photo = await Photo.findById(req.params.id);
     if (!photo) return res.status(404).json({ error: "Photo not found" });
 
-    // Delete image file from uploads folder
     const filePath = path.join(__dirname, "uploads", path.basename(photo.imageUrl));
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     await Photo.findByIdAndDelete(req.params.id);
     res.json({ message: "Photo deleted successfully" });
@@ -88,6 +88,11 @@ app.delete("/photos/:id", async (req, res) => {
   }
 });
 
+// ✅ Default route for Render check
+app.get("/", (req, res) => {
+  res.send("🎉 CelebrateHub Backend is Live!");
+});
 
-const PORT = 8000;
+// ✅ Port setup
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
