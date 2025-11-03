@@ -26,7 +26,6 @@ app.use(
 );
 app.use(express.json());
 
-// ✅ File path setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -44,85 +43,88 @@ cloudinary.config({
 });
 
 // ✅ Schema
-const PhotoSchema = new mongoose.Schema({
-  imageUrl: String,
+const MediaSchema = new mongoose.Schema({
+  url: String,
   category: String,
+  type: String, // 'image' or 'video'
 });
-const Photo = mongoose.model("Photo", PhotoSchema);
+const Media = mongoose.model("Media", MediaSchema);
 
-// ✅ Multer (local temp storage)
+// ✅ Multer config — local temp upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, "-")}`),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 const upload = multer({ storage });
 
-// ✅ Upload Route (upload → Cloudinary)
-app.post("/upload", upload.single("image"), async (req, res) => {
+// ✅ Upload Route — multiple files
+app.post("/upload", upload.array("files", 10), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const uploaded = [];
 
-    const localPath = path.join(__dirname, "uploads", req.file.filename);
+    for (const file of req.files) {
+      const localPath = path.join(__dirname, "uploads", file.filename);
 
-    // 📤 Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(localPath, {
-      folder: "celebratehub",
-      resource_type: "image",
-    });
+      // detect type
+      const resourceType = file.mimetype.startsWith("video") ? "video" : "image";
 
-    // 🗑️ Delete local file after upload
-    fs.unlinkSync(localPath);
+      // upload to Cloudinary
+      const result = await cloudinary.uploader.upload(localPath, {
+        folder: "celebratehub",
+        resource_type: resourceType,
+      });
 
-    // 💾 Save to MongoDB
-    const photo = new Photo({
-      imageUrl: uploadResult.secure_url,
-      category: req.body.category,
-    });
+      fs.unlinkSync(localPath); // remove local temp file
 
-    await photo.save();
-    res.json(photo);
+      const media = new Media({
+        url: result.secure_url,
+        category: req.body.category,
+        type: resourceType,
+      });
+      await media.save();
+      uploaded.push(media);
+    }
+
+    res.json(uploaded);
   } catch (err) {
     console.error("❌ Upload failed:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 });
 
-// ✅ Get photos by category
+// ✅ Get media by category
 app.get("/photos/:category", async (req, res) => {
   try {
-    const photos = await Photo.find({ category: req.params.category });
-    res.json(photos);
+    const media = await Media.find({ category: req.params.category });
+    res.json(media);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch photos" });
+    res.status(500).json({ error: "Failed to fetch media" });
   }
 });
 
-// ✅ Delete photo (Cloudinary + MongoDB)
+// ✅ Delete media
 app.delete("/photos/:id", async (req, res) => {
   try {
-    const photo = await Photo.findById(req.params.id);
-    if (!photo) return res.status(404).json({ error: "Photo not found" });
+    const media = await Media.findById(req.params.id);
+    if (!media) return res.status(404).json({ error: "Media not found" });
 
-    // Optional: extract Cloudinary public_id for deletion
-    const parts = photo.imageUrl.split("/");
-    const filename = parts[parts.length - 1];
-    const publicId = `celebratehub/${filename.split(".")[0]}`;
-    await cloudinary.uploader.destroy(publicId);
+    // Delete from Cloudinary
+    const publicId = media.url.split("/").pop().split(".")[0];
+    await cloudinary.uploader.destroy(`celebratehub/${publicId}`, {
+      resource_type: media.type,
+    });
 
-    await Photo.findByIdAndDelete(req.params.id);
-    res.json({ message: "Photo deleted successfully" });
+    await Media.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted successfully" });
   } catch (err) {
     console.error("❌ Delete failed:", err);
-    res.status(500).json({ error: "Failed to delete photo" });
+    res.status(500).json({ error: "Failed to delete" });
   }
 });
 
-// ✅ Default route
 app.get("/", (req, res) => {
-  res.send("🎉 CelebrateHub Backend is Live with Cloudinary!");
+  res.send("🎉 CelebrateHub Backend is Live with Cloudinary + Video Uploads!");
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
