@@ -50,7 +50,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     // IMPORTANT: use Render URL instead of localhost
     const BASE_URL = "https://celebratehub.onrender.com";
     const photo = new Photo({
-      imageUrl: `${BASE_URL}/uploads/${req.file.filename}`,
+      imageUrl: `https://celebratehub.onrender.com/uploads/uploads/${req.file.filename}`,
       category: req.body.category,
     });
     await photo.save();
