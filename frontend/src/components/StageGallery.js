@@ -10,7 +10,7 @@ const StageGallery = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  const BASE_URL = "https://celebratehub.onrender.com"; // ✅ your deployed backend
+  const BASE_URL = "https://celebratehub.onrender.com";
 
   useEffect(() => {
     fetchMedia();
@@ -26,7 +26,7 @@ const StageGallery = () => {
   };
 
   const handleUpload = async () => {
-    if (!files.length) return alert("Select files first!");
+    if (!files.length) return alert("Select at least one file!");
     const formData = new FormData();
     for (const file of files) formData.append("files", file);
     formData.append("category", category);
@@ -53,7 +53,9 @@ const StageGallery = () => {
     }
   };
 
-  const imageUrls = media.filter(m => m.type === "image").map(m => m.url);
+  // Get only images for lightbox
+  const imageItems = media.filter((m) => m.type === "image");
+  const imageUrls = imageItems.map((m) => m.url);
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
@@ -103,7 +105,10 @@ const StageGallery = () => {
                 src={item.url}
                 alt="media"
                 onClick={() => {
-                  setLightboxIndex(i);
+                  const imageIndex = imageItems.findIndex(
+                    (img) => img._id === item._id
+                  );
+                  setLightboxIndex(imageIndex);
                   setIsLightboxOpen(true);
                 }}
                 style={{
@@ -117,7 +122,11 @@ const StageGallery = () => {
               <video
                 src={item.url}
                 controls
-                style={{ width: "100%", height: "200px", objectFit: "cover" }}
+                style={{
+                  width: "100%",
+                  height: "200px",
+                  objectFit: "cover",
+                }}
               />
             )}
             <button
@@ -141,14 +150,16 @@ const StageGallery = () => {
         ))}
       </div>
 
-      {isLightboxOpen && (
+      {isLightboxOpen && imageUrls.length > 0 && (
         <Lightbox
           mainSrc={imageUrls[lightboxIndex]}
           nextSrc={imageUrls[(lightboxIndex + 1) % imageUrls.length]}
           prevSrc={imageUrls[(lightboxIndex + imageUrls.length - 1) % imageUrls.length]}
           onCloseRequest={() => setIsLightboxOpen(false)}
           onMovePrevRequest={() =>
-            setLightboxIndex((lightboxIndex + imageUrls.length - 1) % imageUrls.length)
+            setLightboxIndex(
+              (lightboxIndex + imageUrls.length - 1) % imageUrls.length
+            )
           }
           onMoveNextRequest={() =>
             setLightboxIndex((lightboxIndex + 1) % imageUrls.length)
